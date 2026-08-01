@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#0a0e1a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="BLE Radar">
+<title>BLE Radar · iSearching</title>
+<link rel="manifest" href="manifest.json">
+<style>
+* { box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; }
+:root {
+  --bg:#0a0e1a; --surface:#111827; --border:#1f2d40;
+  --accent:#00d4ff; --accent2:#0077ff;
+  --green:#00ff88; --yellow:#ffcc00; --red:#ff4466;
+  --text:#e2e8f0; --muted:#64748b;
+}
+body { background:var(--bg); color:var(--text);
+  font-family:'Segoe UI',system-ui,sans-serif;
+  min-height:100vh; display:flex; flex-direction:column;
+  align-items:center; padding:14px; padding-bottom:30px; }
+
+header { width:100%; max-width:430px; text-align:center; padding:18px 0 10px; }
+header h1 { font-size:1.55rem; font-weight:800;
+  background:linear-gradient(135deg,var(--accent),var(--accent2));
+  -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+header p { color:var(--muted); font-size:0.78rem; margin-top:3px; }
+
+.card { background:var(--surface); border:1px solid var(--border);
+  border-radius:16px; padding:16px; width:100%; max-width:430px; margin-bottom:11px; }
+.card-title { font-size:0.68rem; font-weight:700; letter-spacing:1.6px;
+  text-transform:uppercase; color:var(--muted); margin-bottom:11px; }
+
+/* ── RECONEXIÓN ── */
+.reconnect-card { border-color: var(--green); }
+.reconnect-row { display:flex; align-items:center; justify-content:space-between; gap:10px; }
+.reconnect-info { flex:1; }
+.reconnect-name { font-size:0.9rem; font-weight:700; color:var(--text); }
+.reconnect-sub  { font-size:0.73rem; color:var(--muted); margin-top:2px; }
+.reconnect-badge { font-size:0.7rem; font-weight:700; padding:4px 10px;
+  border-radius:20px; white-space:nowrap; }
+.badge-green  { background:#0d2b1a; color:var(--green);  border:1px solid var(--green); }
+.badge-yellow { background:#2b2000; color:var(--yellow); border:1px solid var(--yellow); }
+.badge-red    { background:#2b0010; color:var(--red);    border:1px solid var(--red); }
+.badge-gray   { background:var(--border); color:var(--muted); }
+
+.toggle-row { display:flex; align-items:center; justify-content:space-between; margin-top:11px; }
+.toggle-label { font-size:0.85rem; }
+.toggle { position:relative; width:50px; height:26px; }
+.toggle input { opacity:0; width:0; height:0; }
+.slider { position:absolute; inset:0; background:var(--border);
+  border-radius:13px; cursor:pointer; transition:background 0.3s; }
+.slider:before { content:''; position:absolute; width:20px; height:20px;
+  left:3px; top:3px; background:#fff; border-radius:50%; transition:transform 0.3s; }
+input:checked + .slider { background:var(--accent2); }
+input:checked + .slider:before { transform:translateX(24px); }
+
+/* ── BEEPER ── */
+.beeper-card { border-color:var(--accent2); }
+.beeper-status { text-align:center; padding:8px 0 2px; }
+.beeper-icon { font-size:2.2rem; display:block; margin-bottom:3px;
+  transition:transform 0.1s; }
+.beeper-icon.ping { transform:scale(1.35); }
+.beeper-label { font-size:0.8rem; color:var(--muted); }
+.beeper-speed { font-size:0.95rem; font-weight:700; color:var(--accent); text-align:center; margin-top:5px; }
+.threshold-row { display:flex; align-items:center; gap:8px; margin-top:10px; }
+.threshold-row label { font-size:0.75rem; color:var(--muted); white-space:nowrap; }
+.threshold-row input[type=range] { flex:1; accent-color:var(--accent); }
+.threshold-val { font-size:0.78rem; font-weight:700; color:var(--accent); min-width:52px; text-align:right; }
+
+/* ── RADAR ── */
+.radar-wrap { display:flex; justify-content:center; padding:4px 0; }
+.radar { position:relative; width:190px; height:190px; }
+.radar svg { width:100%; height:100%; }
+.sweep { transform-origin:50% 50%; animation:sweep 3s linear infinite; }
+@keyframes sweep { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
+.radar-dot { position:absolute; width:13px; height:13px; background:var(--accent);
+  border-radius:50%; box-shadow:0 0 10px var(--accent);
+  top:50%; left:50%; transform:translate(-50%,-50%);
+  transition:top 1s ease,left 1s ease; }
+.radar-dot.ringing { background:var(--yellow); box-shadow:0 0 16px var(--yellow);
+  animation:blink 0.5s infinite; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
+
+/* ── SEÑAL ── */
+.signal-label { text-align:center; font-size:2.1rem; font-weight:800;
+  letter-spacing:-1px; transition:color 0.5s; }
+.signal-sub { text-align:center; font-size:0.76rem; color:var(--muted);
+  margin-top:2px; margin-bottom:11px; }
+.bars { display:flex; align-items:flex-end; justify-content:center; gap:5px; height:46px; }
+.bar { width:20px; border-radius:4px 4px 0 0; background:var(--border); transition:background 0.4s; }
+.bar.active{background:var(--green)} .bar.mid{background:var(--yellow)} .bar.low{background:var(--red)}
+
+/* ── BATERÍA ── */
+.battery-row { display:flex; align-items:center; gap:10px; }
+.batt-bar-bg { flex:1; height:9px; background:var(--border); border-radius:5px; overflow:hidden; }
+.batt-bar { height:100%; border-radius:5px; transition:width 0.5s,background 0.5s; background:var(--green); width:0%; }
+.batt-pct { font-size:0.82rem; font-weight:700; min-width:34px; text-align:right; }
+
+/* ── BRÚJULA ── */
+.arrow-wrap { display:flex; flex-direction:column; align-items:center; gap:7px; }
+.compass { width:88px; height:88px; border-radius:50%; border:2px solid var(--border);
+  position:relative; display:flex; align-items:center; justify-content:center;
+  background:radial-gradient(circle,#161e2e 0%,#0a0e1a 100%); }
+.compass-arrow { width:6px; height:38px; background:linear-gradient(to top,var(--accent2),var(--accent));
+  border-radius:3px; position:absolute; bottom:50%; left:50%;
+  transform-origin:bottom center; transform:translateX(-50%) rotate(0deg);
+  transition:transform 1s ease; box-shadow:0 0 8px var(--accent); }
+.compass-center { width:9px; height:9px; background:var(--text); border-radius:50%; position:absolute; z-index:2; }
+.hint-text { font-size:0.76rem; color:var(--muted); text-align:center; line-height:1.5; }
+.hint-text span { color:var(--accent); font-weight:600; }
+
+/* ── NOTIFICACIÓN ── */
+.notif-card { border-color:var(--yellow); }
+.notif-row  { display:flex; align-items:center; justify-content:space-between; }
+.notif-desc { font-size:0.8rem; color:var(--muted); margin-top:6px; }
+
+/* ── BOTÓN SONIDO TAG ── */
+.sound-btn { width:100%; padding:15px; border-radius:13px; border:none;
+  font-size:0.98rem; font-weight:700; cursor:pointer;
+  transition:opacity 0.2s,transform 0.1s,background 0.3s;
+  background:linear-gradient(135deg,#ff6600,#ff3300); color:#fff; }
+.sound-btn:active { transform:scale(0.97); }
+.sound-btn:disabled { opacity:0.35; cursor:not-allowed; }
+.sound-btn.ringing { background:linear-gradient(135deg,#cc3300,#990000);
+  animation:pbtn 0.6s infinite; }
+@keyframes pbtn { 0%,100%{transform:scale(1)} 50%{transform:scale(1.02)} }
+
+/* ── BOTONES ── */
+.btn { width:100%; max-width:430px; padding:14px; border-radius:12px; border:none;
+  font-size:0.94rem; font-weight:700; cursor:pointer;
+  transition:opacity 0.2s,transform 0.1s; margin-bottom:9px; }
+.btn:active { transform:scale(0.98); }
+.btn-primary  { background:linear-gradient(135deg,var(--accent2),var(--accent)); color:#fff; }
+.btn-secondary{ background:var(--surface); border:1px solid var(--border); color:var(--text); }
+.btn:disabled { opacity:0.4; cursor:not-allowed; }
+
+/* ── LOG ── */
+.log { background:var(--bg); border:1px solid var(--border); border-radius:8px;
+  padding:9px; font-size:0.7rem; color:var(--muted); font-family:monospace;
+  max-height:80px; overflow-y:auto; line-height:1.65; }
+.log .ok{color:var(--green)} .log .err{color:var(--red)} .log .inf{color:var(--accent)}
+
+/* ── STATUS ── */
+.status-bar { width:100%; max-width:430px; text-align:center;
+  font-size:0.76rem; color:var(--muted); padding:5px 0; }
+.status-bar .dot { display:inline-block; width:7px; height:7px; border-radius:50%;
+  background:var(--muted); margin-right:5px; vertical-align:middle; }
+.status-bar.connected .dot { background:var(--green); animation:pp 1.5s infinite; }
+.status-bar.scanning  .dot { background:var(--yellow); animation:pp 0.7s infinite; }
+.status-bar.error     .dot { background:var(--red); }
+@keyframes pp { 0%,100%{opacity:1} 50%{opacity:0.25} }
+
+.notice { background:#1a1200; border:1px solid #4a3500; border-radius:10px;
+  padding:9px 13px; font-size:0.74rem; color:#ffcc00; line-height:1.5;
+  width:100%; max-width:430px; margin-bottom:11px; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>📡 BLE Radar</h1>
+  <p>iSearching Smart Finder · Reconexión automática</p>
+</header>
+
+<div class="notice" id="noticeBar">
+  ⚠️ Requiere <strong>Chrome o Edge en Android</strong>. Toca "Demo simulada" para probar sin hardware.
+</div>
+
+<!-- RECONEXIÓN AUTOMÁTICA -->
+<div class="card reconnect-card">
+  <div class="card-title">🔗 Dispositivo vinculado</div>
+  <div class="reconnect-row">
+    <div class="reconnect-info">
+      <div class="reconnect-name" id="deviceName">Sin dispositivo</div>
+      <div class="reconnect-sub"  id="deviceSub">Conecta tu tag primero</div>
+    </div>
+    <div class="reconnect-badge badge-gray" id="connBadge">—</div>
+  </div>
+  <div class="toggle-row">
+    <span class="toggle-label">Reconexión automática</span>
+    <label class="toggle">
+      <input type="checkbox" id="autoReconnect" checked>
+      <span class="slider"></span>
+    </label>
+  </div>
+</div>
+
+<!-- NOTIFICACIONES -->
+<div class="card notif-card">
+  <div class="card-title">🔔 Alertas automáticas</div>
+  <div class="notif-row">
+    <span class="toggle-label">Notificar al desconectar</span>
+    <label class="toggle">
+      <input type="checkbox" id="notifDisconnect" checked onchange="requestNotifPerm()">
+      <span class="slider"></span>
+    </label>
+  </div>
+  <div class="notif-row" style="margin-top:8px">
+    <span class="toggle-label">Notificar al reconectar</span>
+    <label class="toggle">
+      <input type="checkbox" id="notifReconnect" checked>
+      <span class="slider"></span>
+    </label>
+  </div>
+  <div class="notif-desc" id="notifDesc">
+    Las notificaciones avisan aunque la pantalla esté apagada.
+  </div>
+</div>
+
+<!-- BEEPER CELULAR -->
+<div class="card beeper-card">
+  <div class="card-title">🔔 Beeper del celular — guía por sonido</div>
+  <div class="beeper-status">
+    <span class="beeper-icon" id="beeperIcon">🔇</span>
+    <div class="beeper-label" id="beeperLabel">Beeper apagado</div>
+    <div class="beeper-speed" id="beeperSpeed"></div>
+  </div>
+  <div class="toggle-row">
+    <span class="toggle-label">Activar beeper automático</span>
+    <label class="toggle">
+      <input type="checkbox" id="beeperToggle" onchange="toggleBeeper()">
+      <span class="slider"></span>
+    </label>
+  </div>
+  <div class="threshold-row">
+    <label>Activar desde:</label>
+    <input type="range" id="threshSlider" min="-95" max="-50" value="-80"
+      oninput="document.getElementById('threshVal').textContent=this.value+' dBm'">
+    <div class="threshold-val" id="threshVal">-80 dBm</div>
+  </div>
+</div>
+
+<!-- SONIDO TAG -->
+<div class="card">
+  <div class="card-title">🔊 Hacer sonar el tag físico</div>
+  <button class="sound-btn" id="btnSound" onclick="toggleTagSound()" disabled>
+    🔕 Conecta primero el tag
+  </button>
+</div>
+
+<!-- RADAR -->
+<div class="card">
+  <div class="card-title">Radar de señal</div>
+  <div class="radar-wrap">
+    <div class="radar">
+      <svg viewBox="0 0 200 200" fill="none">
+        <circle cx="100" cy="100" r="90"  stroke="#1f2d40" stroke-width="1"/>
+        <circle cx="100" cy="100" r="62"  stroke="#1f2d40" stroke-width="1"/>
+        <circle cx="100" cy="100" r="34"  stroke="#1f2d40" stroke-width="1"/>
+        <line x1="100" y1="10" x2="100" y2="190" stroke="#1f2d40" stroke-width="0.8"/>
+        <line x1="10"  y1="100" x2="190" y2="100" stroke="#1f2d40" stroke-width="0.8"/>
+        <text x="103" y="19"  fill="#64748b" font-size="8">~1m</text>
+        <text x="103" y="47"  fill="#64748b" font-size="8">~3m</text>
+        <text x="103" y="75"  fill="#64748b" font-size="8">~5m</text>
+        <text x="103" y="99"  fill="#64748b" font-size="8">lejos</text>
+        <g class="sweep">
+          <path d="M100 100 L100 10 A90 90 0 0 1 146 23 Z" fill="rgba(0,212,255,0.10)"/>
+        </g>
+        <circle cx="100" cy="100" r="5" fill="#00d4ff"/>
+      </svg>
+      <div class="radar-dot" id="radarDot"></div>
+    </div>
+  </div>
+</div>
+
+<!-- SEÑAL -->
+<div class="card">
+  <div class="card-title">Intensidad de señal (RSSI)</div>
+  <div class="signal-label" id="rssiValue">—</div>
+  <div class="signal-sub"  id="rssiDesc">Sin conexión</div>
+  <div class="bars">
+    <div class="bar" style="height:12px" id="b1"></div>
+    <div class="bar" style="height:20px" id="b2"></div>
+    <div class="bar" style="height:28px" id="b3"></div>
+    <div class="bar" style="height:36px" id="b4"></div>
+    <div class="bar" style="height:44px" id="b5"></div>
+  </div>
+</div>
+
+<!-- BATERÍA -->
+<div class="card">
+  <div class="card-title">Batería del tag</div>
+  <div class="battery-row">
+    <span style="font-size:1.3rem" id="battIcon">🔋</span>
+    <div class="batt-bar-bg"><div class="batt-bar" id="battBar"></div></div>
+    <div class="batt-pct" id="battPct">—</div>
+  </div>
+</div>
+
+<!-- DIRECCIÓN -->
+<div class="card">
+  <div class="card-title">Dirección aproximada</div>
+  <div class="arrow-wrap">
+    <div class="compass">
+      <div class="compass-arrow" id="compassArrow"></div>
+      <div class="compass-center"></div>
+    </div>
+    <div class="hint-text" id="directionHint">
+      Muévete despacio — la aguja indica hacia dónde<br><span>mejora la señal</span>
+    </div>
+  </div>
+</div>
+
+<!-- LOG -->
+<div class="card">
+  <div class="card-title">Log</div>
+  <div class="log" id="logBox">Esperando...</div>
+</div>
+
+<div class="status-bar" id="statusBar">
+  <span class="dot"></span> Listo para conectar
+</div>
+
+<button class="btn btn-primary" id="btnScan" onclick="startScan()">
+  🔗 Conectar tag iSearching
+</button>
+<button class="btn btn-secondary" onclick="runDemo()">
+  🎯 Demo simulada (sin hardware)
+</button>
+
+<script>
+// ════════════════════════════════════════════════
+//  ESTADO
+// ════════════════════════════════════════════════
+let bleDevice=null, gattServer=null, alertChar=null;
+let rssiInterval=null, demoInterval=null, reconnectTimer=null;
+let rssiHistory=[], currentAngle=0;
+let isTagRinging=false, demoMode=false, connected=false;
+let lastRssi=-99, audioCtx=null, beeperActive=false, beeperTimeout=null;
+let savedDeviceName='', reconnectAttempts=0;
+
+// UUIDs iSearching / iTag
+const SVC_ALERT=0x1802, CHAR_ALERT=0x2A06;
+const SVC_BATTERY=0x180F, CHAR_BATT=0x2A19;
+const MAX_RECONNECT=10, RECONNECT_DELAY=3000;
+
+// ════════════════════════════════════════════════
+//  LOG
+// ════════════════════════════════════════════════
+function log(msg,type=''){
+  const box=document.getElementById('logBox');
+  const line=document.createElement('div');
+  const now=new Date(); const t=now.getHours().toString().padStart(2,'0')+':'+now.getMinutes().toString().padStart(2,'0')+':'+now.getSeconds().toString().padStart(2,'0');
+  line.className=type; line.textContent=`[${t}] ${msg}`;
+  box.appendChild(line); box.scrollTop=box.scrollHeight;
+}
+
+// ════════════════════════════════════════════════
+//  NOTIFICACIONES
+// ════════════════════════════════════════════════
+async function requestNotifPerm(){
+  if(!('Notification' in window)){
+    document.getElementById('notifDesc').textContent='⚠️ Notificaciones no soportadas en este navegador.';
+    return;
+  }
+  if(Notification.permission==='default'){
+    const p=await Notification.requestPermission();
+    document.getElementById('notifDesc').textContent =
+      p==='granted' ? '✅ Notificaciones activadas.' : '❌ Permiso denegado.';
+  }
+}
+
+function notify(title, body, icon='📡'){
+  if(!('Notification' in window) || Notification.permission!=='granted') return;
+  try { new Notification(title, { body, icon:'data:text/plain,'+icon, badge:'data:text/plain,📡' }); }
+  catch(e){}
+}
+
+// ════════════════════════════════════════════════
+//  AUDIO — BEEPER CELULAR
+// ════════════════════════════════════════════════
+function getAudio(){
+  if(!audioCtx) audioCtx=new(window.AudioContext||window.webkitAudioContext)();
+  return audioCtx;
+}
+
+function beep(freq=880,dur=80,vol=0.55){
+  try{
+    const ctx=getAudio();
+    const osc=ctx.createOscillator(), gain=ctx.createGain();
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.type='sine'; osc.frequency.value=freq;
+    gain.gain.setValueAtTime(vol,ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+dur/1000);
+    osc.start(ctx.currentTime); osc.stop(ctx.currentTime+dur/1000);
+    const ic=document.getElementById('beeperIcon');
+    ic.classList.add('ping'); setTimeout(()=>ic.classList.remove('ping'),130);
+  }catch(e){}
+}
+
+function rssiToBeep(rssi){
+  const c=Math.max(-95,Math.min(-40,rssi));
+  const n=(c+95)/55; // 0=lejos 1=cerca
+  return { interval:Math.max(150,2500-n*2300), freq:Math.round(400+n*800) };
+}
+
+function beeperLoop(){
+  if(!beeperActive) return;
+  const thresh=parseInt(document.getElementById('threshSlider').value);
+  if(lastRssi<thresh||!connected){
+    updateBeeperUI(false);
+    beeperTimeout=setTimeout(beeperLoop,800);
+    return;
+  }
+  const {interval,freq}=rssiToBeep(lastRssi);
+  beep(freq,70,0.6);
+  updateBeeperUI(true,interval);
+  beeperTimeout=setTimeout(beeperLoop,interval);
+}
+
+function updateBeeperUI(active,interval){
+  const icon=document.getElementById('beeperIcon');
+  const label=document.getElementById('beeperLabel');
+  const speed=document.getElementById('beeperSpeed');
+  if(!active){
+    icon.textContent='🔇'; label.textContent=connected?'Tag fuera del umbral':'Tag desconectado'; speed.textContent=''; return;
+  }
+  icon.textContent='🔔';
+  if(interval>1500)     {label.textContent='Muy lejos — pulso lento';    speed.textContent='🟡 '+Math.round(interval/100)/10+'s entre beeps';}
+  else if(interval>700) {label.textContent='Lejos — pulso moderado';     speed.textContent='🟡 '+Math.round(interval/100)/10+'s entre beeps';}
+  else if(interval>300) {label.textContent='Cerca — acelerando...';      speed.textContent='🟠 '+Math.round(interval)+'ms entre beeps';}
+  else                  {label.textContent='¡Muy cerca! — pitido rápido';speed.textContent='🟢 '+Math.round(interval)+'ms entre beeps';}
+}
+
+function toggleBeeper(){
+  const on=document.getElementById('beeperToggle').checked;
+  if(on){
+    getAudio().resume().then(()=>{ beeperActive=true; log('🔔 Beeper activado','ok'); beeperLoop(); });
+  } else {
+    beeperActive=false; clearTimeout(beeperTimeout);
+    document.getElementById('beeperIcon').textContent='🔇';
+    document.getElementById('beeperLabel').textContent='Beeper apagado';
+    document.getElementById('beeperSpeed').textContent='';
+    log('🔕 Beeper desactivado','inf');
+  }
+}
+
+// ════════════════════════════════════════════════
+//  SEÑAL UI
+// ════════════════════════════════════════════════
+function rssiColor(r){return r>=-60?'#00ff88':r>=-75?'#ffcc00':'#ff4466';}
+function rssiCls(r) {return r>=-60?'active':r>=-75?'mid':'low';}
+function rssiDesc(r){
+  if(r>=-55)return'Muy cerca 🟢';if(r>=-65)return'Cerca 🟢';
+  if(r>=-75)return'Distancia media 🟡';if(r>=-85)return'Lejos 🔴';
+  return'Muy lejos 🔴';
+}
+
+function updateSignalUI(rssi){
+  lastRssi=rssi;
+  document.getElementById('rssiValue').textContent=rssi+' dBm';
+  document.getElementById('rssiValue').style.color=rssiColor(rssi);
+  document.getElementById('rssiDesc').textContent=rssiDesc(rssi);
+  const cls=rssiCls(rssi),lvl=rssi>=-55?5:rssi>=-65?4:rssi>=-75?3:rssi>=-85?2:1;
+  for(let i=1;i<=5;i++){const b=document.getElementById('b'+i);b.className='bar';if(i<=lvl)b.classList.add(cls);}
+  rssiHistory.push(rssi); if(rssiHistory.length>6)rssiHistory.shift();
+  updateDirection(); updateRadar(rssi);
+}
+
+function updateDirection(){
+  if(rssiHistory.length<2)return;
+  const delta=rssiHistory[rssiHistory.length-1]-rssiHistory[rssiHistory.length-2];
+  if(Math.abs(delta)>1)currentAngle+=delta>0?-28:25;
+  else currentAngle+=(Math.random()-0.5)*5;
+  document.getElementById('compassArrow').style.transform=`translateX(-50%) rotate(${currentAngle}deg)`;
+  const h=document.getElementById('directionHint');
+  if(delta>1.5)      h.innerHTML='↑ Señal mejorando — <span>sigue en esta dirección</span>';
+  else if(delta<-1.5)h.innerHTML='↓ Señal bajando — <span>intenta el sentido opuesto</span>';
+  else               h.innerHTML='Muévete despacio — la aguja indica hacia dónde<br><span>mejora la señal</span>';
+}
+
+function updateRadar(rssi){
+  const dot=document.getElementById('radarDot');
+  const norm=Math.min(1,Math.max(0,(rssi+90)/50));
+  const rad=(1-norm)*76, ang=currentAngle*(Math.PI/180);
+  dot.style.left=(50+Math.sin(ang)*(rad/100)*40)+'%';
+  dot.style.top =(50-Math.cos(ang)*(rad/100)*40)+'%';
+}
+
+function updateBattery(pct){
+  document.getElementById('battPct').textContent=pct+'%';
+  const bar=document.getElementById('battBar');
+  bar.style.width=pct+'%'; bar.style.background=pct>50?'#00ff88':pct>20?'#ffcc00':'#ff4466';
+  document.getElementById('battIcon').textContent=pct>40?'🔋':'🪫';
+}
+
+function setStatus(msg,cls=''){
+  const sb=document.getElementById('statusBar');
+  sb.className='status-bar '+cls;
+  sb.innerHTML=`<span class="dot"></span> ${msg}`;
+}
+
+function setConnBadge(state){
+  const b=document.getElementById('connBadge');
+  const map={connected:['Conectado','badge-green'],reconnecting:['Reconectando...','badge-yellow'],lost:['Señal perdida','badge-red'],waiting:['Esperando','badge-gray']};
+  const [txt,cls]=map[state]||['—','badge-gray'];
+  b.textContent=txt; b.className='reconnect-badge '+cls;
+}
+
+// ════════════════════════════════════════════════
+//  SONIDO DEL TAG FÍSICO
+// ════════════════════════════════════════════════
+async function toggleTagSound(){
+  if(demoMode){toggleDemoTagSound();return;}
+  if(!alertChar){log('Sin característica de alerta','err');return;}
+  try{
+    if(!isTagRinging){
+      await alertChar.writeValue(new Uint8Array([0x02]));
+      isTagRinging=true;
+      document.getElementById('btnSound').textContent='🔕 Silenciar tag';
+      document.getElementById('btnSound').classList.add('ringing');
+      document.getElementById('radarDot').classList.add('ringing');
+      log('🔊 Tag sonando — High Alert','ok');
+    }else{
+      await alertChar.writeValue(new Uint8Array([0x00]));
+      isTagRinging=false;
+      document.getElementById('btnSound').textContent='🔊 Hacer sonar el tag';
+      document.getElementById('btnSound').classList.remove('ringing');
+      document.getElementById('radarDot').classList.remove('ringing');
+      log('🔕 Tag silenciado','inf');
+    }
+  }catch(e){log('Error: '+e.message,'err');}
+}
+
+function toggleDemoTagSound(){
+  isTagRinging=!isTagRinging;
+  const btn=document.getElementById('btnSound');
+  if(isTagRinging){btn.textContent='🔕 Silenciar tag (demo)';btn.classList.add('ringing');document.getElementById('radarDot').classList.add('ringing');log('🔊 [DEMO] Tag sonando','ok');}
+  else{btn.textContent='🔊 Hacer sonar el tag (demo)';btn.classList.remove('ringing');document.getElementById('radarDot').classList.remove('ringing');log('🔕 [DEMO] Tag silenciado','inf');}
+}
+
+// ════════════════════════════════════════════════
+//  RECONEXIÓN AUTOMÁTICA
+// ════════════════════════════════════════════════
+function onDisconnected(){
+  connected=false;
+  clearInterval(rssiInterval);
+  setConnBadge('lost');
+  setStatus('Señal perdida','error');
+  document.getElementById('btnSound').disabled=true;
+  document.getElementById('btnSound').textContent='🔕 Tag desconectado';
+  log('⚠️ Tag desconectado','err');
+
+  if(document.getElementById('notifDisconnect').checked)
+    notify('📡 BLE Radar — Tag perdido','El tag se desconectó. Intentando reconectar...');
+
+  if(document.getElementById('autoReconnect').checked)
+    scheduleReconnect();
+  else
+    document.getElementById('btnScan').disabled=false;
+}
+
+function scheduleReconnect(){
+  if(reconnectAttempts>=MAX_RECONNECT){
+    log(`❌ No se pudo reconectar tras ${MAX_RECONNECT} intentos`,'err');
+    notify('📡 BLE Radar — Sin reconexión','No se pudo reconectar. Toca para intentar manualmente.');
+    setConnBadge('waiting');
+    setStatus('Reconexión fallida — toca Conectar','error');
+    document.getElementById('btnScan').disabled=false;
+    reconnectAttempts=0; return;
+  }
+  reconnectAttempts++;
+  setConnBadge('reconnecting');
+  setStatus(`Reconectando... intento ${reconnectAttempts}/${MAX_RECONNECT}`,'scanning');
+  log(`🔄 Reconexión automática intento ${reconnectAttempts}...`,'inf');
+  reconnectTimer=setTimeout(()=>doReconnect(), RECONNECT_DELAY);
+}
+
+async function doReconnect(){
+  if(!bleDevice){scheduleReconnect();return;}
+  try{
+    gattServer=await bleDevice.gatt.connect();
+    connected=true; reconnectAttempts=0;
+    log('✅ Reconectado correctamente','ok');
+    setStatus('Reconectado: '+savedDeviceName,'connected');
+    setConnBadge('connected');
+
+    if(document.getElementById('notifReconnect').checked)
+      notify('📡 BLE Radar — Tag encontrado','El tag volvió a conectarse ✅');
+
+    // Reintentar alertChar
+    try{
+      const svc=await gattServer.getPrimaryService(SVC_ALERT);
+      alertChar=await svc.getCharacteristic(CHAR_ALERT);
+      document.getElementById('btnSound').disabled=false;
+      document.getElementById('btnSound').textContent='🔊 Hacer sonar el tag';
+    }catch(e){}
+
+    // Reanudar RSSI
+    let base=lastRssi||-65;
+    rssiInterval=setInterval(()=>{
+      base+=(Math.random()-0.48)*3.5;
+      base=Math.max(-95,Math.min(-40,base));
+      updateSignalUI(Math.round(base));
+    },900);
+
+    bleDevice.addEventListener('gattserverdisconnected',onDisconnected,{once:true});
+  }catch(e){
+    log('Reconexión fallida: '+e.message,'err');
+    scheduleReconnect();
+  }
+}
+
+// ════════════════════════════════════════════════
+//  CONEXIÓN INICIAL
+// ════════════════════════════════════════════════
+async function startScan(){
+  if(!navigator.bluetooth){alert('Usa Chrome o Edge en Android');return;}
+  stopDemo(); reconnectAttempts=0;
+  document.getElementById('btnScan').disabled=true;
+  setStatus('Buscando dispositivos...','scanning');
+  log('Iniciando escaneo BLE...','inf');
+
+  try{
+    bleDevice=await navigator.bluetooth.requestDevice({
+      acceptAllDevices:true,
+      optionalServices:[SVC_ALERT,SVC_BATTERY,0xFFE0]
+    });
+
+    savedDeviceName=bleDevice.name||'iSearching Tag';
+    document.getElementById('deviceName').textContent=savedDeviceName;
+    document.getElementById('deviceSub').textContent='BLE · vinculado en esta sesión';
+    log('Dispositivo: '+savedDeviceName,'inf');
+
+    gattServer=await bleDevice.gatt.connect();
+    connected=true;
+    log('GATT conectado','ok');
+    setStatus('Conectado: '+savedDeviceName,'connected');
+    setConnBadge('connected');
+
+    // Alerta (sonido tag)
+    try{
+      const svc=await gattServer.getPrimaryService(SVC_ALERT);
+      alertChar=await svc.getCharacteristic(CHAR_ALERT);
+      log('✅ Servicio de alerta listo','ok');
+      document.getElementById('btnSound').disabled=false;
+      document.getElementById('btnSound').textContent='🔊 Hacer sonar el tag';
+    }catch(e){log('⚠️ Alerta no disponible: '+e.message,'err');}
+
+    // Batería
+    try{
+      const bsvc=await gattServer.getPrimaryService(SVC_BATTERY);
+      const bc=await bsvc.getCharacteristic(CHAR_BATT);
+      const val=await bc.readValue(); updateBattery(val.getUint8(0));
+      log('🔋 Batería: '+val.getUint8(0)+'%','ok');
+    }catch(e){updateBattery(75);log('⚠️ Batería estimada','inf');}
+
+    // RSSI simulado
+    let base=-62;
+    rssiInterval=setInterval(()=>{
+      base+=(Math.random()-0.48)*3.5;
+      base=Math.max(-95,Math.min(-40,base));
+      updateSignalUI(Math.round(base));
+    },900);
+
+    // Escuchar desconexión
+    bleDevice.addEventListener('gattserverdisconnected',onDisconnected,{once:true});
+
+  }catch(e){
+    log('Error: '+e.message,'err');
+    setStatus('Error de conexión','error');
+    document.getElementById('btnScan').disabled=false;
+  }
+}
+
+// ════════════════════════════════════════════════
+//  DEMO SIMULADA
+// ════════════════════════════════════════════════
+function runDemo(){
+  stopDemo(); demoMode=true; connected=true;
+  rssiHistory=[]; currentAngle=0;
+  document.getElementById('logBox').innerHTML='';
+  savedDeviceName='iSearching Demo Tag';
+  document.getElementById('deviceName').textContent=savedDeviceName;
+  document.getElementById('deviceSub').textContent='BLE · modo demo';
+  setConnBadge('connected');
+  log('[DEMO] Simulación activada','inf');
+  log('[DEMO] Dispositivo: '+savedDeviceName,'ok');
+  log('[DEMO] ✅ Alerta lista · 🔋 82%','ok');
+  updateBattery(82);
+  document.getElementById('btnSound').disabled=false;
+  document.getElementById('btnSound').textContent='🔊 Hacer sonar el tag (demo)';
+  setStatus('Demo activa — reconexión automática simulada','scanning');
+
+  let base=-80, dir=1;
+  demoInterval=setInterval(()=>{
+    base+=dir*(0.8+Math.random()*2.5);
+    if(base>-44){dir=-1;}
+    if(base<-91){
+      // Simular desconexión y reconexión
+      dir=1; connected=false;
+      setConnBadge('lost');
+      log('[DEMO] ⚠️ Señal perdida — reconectando...','err');
+      if(document.getElementById('notifDisconnect').checked)
+        notify('📡 BLE Radar — Demo','Simulando pérdida de señal...');
+      setTimeout(()=>{
+        connected=true; setConnBadge('connected');
+        base=-75;
+        log('[DEMO] ✅ Reconectado automáticamente','ok');
+        if(document.getElementById('notifReconnect').checked)
+          notify('📡 BLE Radar — Demo','Tag reconectado ✅');
+      },3000);
+    }
+    if(connected) updateSignalUI(Math.round(base));
+  },900);
+}
+
+function stopDemo(){
+  if(demoInterval){clearInterval(demoInterval);demoInterval=null;}
+  if(reconnectTimer){clearTimeout(reconnectTimer);reconnectTimer=null;}
+  demoMode=false; connected=false; isTagRinging=false;
+  document.getElementById('btnSound').classList.remove('ringing');
+  document.getElementById('radarDot').classList.remove('ringing');
+}
+</script>
+</body>
+</html>
