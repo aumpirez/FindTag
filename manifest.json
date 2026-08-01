@@ -1,11 +1,11 @@
 {
-  "name": "BLE Radar · iSearching",
-  "short_name": "BLE Radar",
-  "description": "Localiza tu tag Bluetooth iSearching con reconexión automática",
+  "name": "TagFin by Aumpire",
+  "short_name": "TagFin",
+  "description": "Localizador Bluetooth iSearching con reconexión automática",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0a0e1a",
-  "theme_color": "#0a0e1a",
+  "background_color": "#080c18",
+  "theme_color": "#080c18",
   "orientation": "portrait",
   "icons": [
     { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
