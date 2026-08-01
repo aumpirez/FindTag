@@ -1,6 +1,6 @@
 {
-  "name": "TagFin by Aumpire",
-  "short_name": "TagFin",
+  "name": "TagFind by Aumpire",
+  "short_name": "TagFind",
   "description": "Localizador Bluetooth iSearching con reconexión automática",
   "start_url": "/",
   "display": "standalone",

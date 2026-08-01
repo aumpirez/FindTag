@@ -243,45 +243,51 @@ input:checked + .slider:before { transform:translateX(22px); }
 
   <div class="app-header">
     <div class="app-logo">
-      <h1>TagFin</h1>
+      <h1>TagFind</h1>
       <span>by Aumpire</span>
     </div>
     <div class="header-badge badge-off" id="mainBadge">Sin conexión</div>
   </div>
 
   <!-- CONECTAR (visible solo sin conexión) -->
-  <div class="card connect-card" id="connectCard">
-    <div class="connect-inner">
-      <div class="connect-icon">📡</div>
-      <div class="connect-text">
-        <h2>Conectar tag</h2>
-        <p>Activa el Bluetooth y acerca tu iSearching</p>
+  <div class="card connect-card" id="connectCard" style="padding:12px 14px">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+      <div style="display:flex;align-items:center;gap:10px">
+        <span style="font-size:1.3rem">📡</span>
+        <div>
+          <div style="font-size:0.88rem;font-weight:700">Conectar tag</div>
+          <div style="font-size:0.7rem;color:var(--muted);margin-top:1px">Activa Bluetooth y acerca tu iSearching</div>
+        </div>
       </div>
+      <button class="btn-connect" id="btnScan" onclick="startScan()"
+        style="width:auto;padding:9px 16px;font-size:0.82rem;white-space:nowrap;margin:0">
+        Conectar
+      </button>
     </div>
-    <button class="btn-connect" id="btnScan" onclick="startScan()">
-      Conectar iSearching
-    </button>
   </div>
 
   <!-- DESCONECTAR (visible solo con conexión) -->
-  <div class="card" id="disconnectCard" style="display:none">
-    <div class="reconnect-info">
-      <div>
-        <div class="reconnect-name" id="mainDevName">—</div>
-        <div class="reconnect-sub" id="mainDevSub">BLE · conectado</div>
+  <div class="card" id="disconnectCard" style="display:none;padding:12px 14px">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+      <div style="display:flex;align-items:center;gap:8px">
+        <div class="header-badge badge-on" style="margin:0">Activo</div>
+        <div>
+          <div class="reconnect-name" id="mainDevName" style="font-size:0.88rem">—</div>
+          <div class="reconnect-sub"  id="mainDevSub"  style="font-size:0.7rem">BLE · conectado</div>
+        </div>
       </div>
-      <div class="header-badge badge-on" style="margin:0">Activo</div>
+      <button class="btn-disconnect" onclick="doDisconnect()"
+        style="width:auto;padding:7px 14px;font-size:0.8rem;margin:0">
+        Desconectar
+      </button>
     </div>
-    <button class="btn-disconnect" onclick="doDisconnect()">
-      Desconectar
-    </button>
   </div>
 
-  <!-- RADAR -->
+  <!-- RADAR + SEÑAL (una sola card) -->
   <div class="card">
     <div class="card-title">Radar de señal</div>
     <div class="radar-wrap">
-      <div class="radar">
+      <div class="radar" style="width:165px;height:165px">
         <svg viewBox="0 0 200 200" fill="none">
           <circle cx="100" cy="100" r="90"  stroke="#1e2d45" stroke-width="1"/>
           <circle cx="100" cy="100" r="62"  stroke="#1e2d45" stroke-width="1"/>
@@ -300,21 +306,39 @@ input:checked + .slider:before { transform:translateX(22px); }
         <div class="radar-dot" id="radarDot"></div>
       </div>
     </div>
-  </div>
-
-  <!-- SEÑAL RSSI -->
-  <div class="card">
-    <div class="card-title">Intensidad de señal</div>
-    <div class="rssi-row">
-      <div class="rssi-big" id="rssiValue">—</div>
+    <!-- Distancia estimada -->
+    <div style="text-align:center;padding:6px 0 4px">
+      <span id="distLabel" style="font-size:1rem;font-weight:700;color:var(--accent)">—</span>
+      <span style="font-size:0.75rem;color:var(--muted);margin-left:5px">distancia estimada</span>
+    </div>
+    <!-- Intensidad dentro del mismo card -->
+    <div style="height:1px;background:var(--border);margin:6px 0 6px"></div>
+    <div class="card-title" style="margin-bottom:5px">Intensidad de señal</div>
+    <div class="rssi-row" style="margin-bottom:0">
+      <div class="rssi-big" id="rssiValue" style="font-size:1.6rem">—</div>
       <div class="rssi-desc" id="rssiDesc">Sin conexión</div>
     </div>
-    <div class="bars">
+    <div class="bars" style="margin-top:4px;height:14px">
       <div class="bar" id="b1"></div>
       <div class="bar" id="b2"></div>
       <div class="bar" id="b3"></div>
       <div class="bar" id="b4"></div>
       <div class="bar" id="b5"></div>
+    </div>
+  </div>
+
+  <!-- DIRECCIÓN APROXIMADA -->
+  <div class="card">
+    <div class="card-title">Dirección aproximada</div>
+    <div class="compass-wrap">
+      <div class="compass">
+        <div class="compass-arrow" id="compassArrow"></div>
+        <div class="compass-center"></div>
+      </div>
+      <div class="compass-text">
+        <h3 id="compassTitle">Sin señal</h3>
+        <p id="directionHint">Conecta el tag y muévete despacio para que la aguja te guíe hacia la <span>señal más fuerte</span></p>
+      </div>
     </div>
   </div>
 
@@ -336,21 +360,6 @@ input:checked + .slider:before { transform:translateX(22px); }
     <button class="sound-btn" id="btnSound" onclick="toggleTagSound()" disabled>
       🔕 Conecta primero el tag
     </button>
-  </div>
-
-  <!-- BRÚJULA -->
-  <div class="card">
-    <div class="card-title">Dirección aproximada</div>
-    <div class="compass-wrap">
-      <div class="compass">
-        <div class="compass-arrow" id="compassArrow"></div>
-        <div class="compass-center"></div>
-      </div>
-      <div class="compass-text">
-        <h3 id="compassTitle">Sin señal</h3>
-        <p id="directionHint">Conecta el tag y muévete despacio para que la aguja te guíe hacia la <span>señal más fuerte</span></p>
-      </div>
-    </div>
   </div>
 
   <!-- BATERÍA -->
@@ -377,7 +386,7 @@ input:checked + .slider:before { transform:translateX(22px); }
 
   <div class="app-header">
     <div class="app-logo">
-      <h1>TagFin</h1>
+      <h1>TagFind</h1>
       <span>Configuración</span>
     </div>
   </div>
@@ -470,7 +479,7 @@ input:checked + .slider:before { transform:translateX(22px); }
   <div class="card">
     <div style="text-align:center;padding:6px 0">
       <div style="font-size:1.8rem;margin-bottom:6px">📡</div>
-      <div style="font-size:1rem;font-weight:800;background:linear-gradient(120deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">TagFin</div>
+      <div style="font-size:1rem;font-weight:800;background:linear-gradient(120deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">TagFind</div>
       <div style="font-size:0.72rem;color:var(--muted);margin-top:3px">by Aumpire · v1.0</div>
       <div style="font-size:0.72rem;color:var(--muted);margin-top:8px;line-height:1.6">
         Localizador Bluetooth para tag iSearching / iFindU<br>
@@ -646,8 +655,24 @@ function updateSignalUI(rssi){
   const cls=rssiCls(rssi), lvl=rssi>=-55?5:rssi>=-65?4:rssi>=-75?3:rssi>=-85?2:1;
   for(let i=1;i<=5;i++){const b=document.getElementById('b'+i); b.className='bar'; if(i<=lvl)b.classList.add(cls);}
   rssiHistory.push(rssi); if(rssiHistory.length>6)rssiHistory.shift();
-  updateDirection(); updateRadar(rssi);
+  updateDirection(); updateRadar(rssi); updateDistance(rssi);
 }
+function updateDistance(rssi){
+  // Fórmula path-loss: d = 10 ^ ((TxPower - RSSI) / (10 * n))
+  // TxPower estimado -59 dBm (iSearching), n=2.5 entorno típico
+  const txPower = -59, n = 2.5;
+  const d = Math.pow(10, (txPower - rssi) / (10 * n));
+  const el = document.getElementById('distLabel');
+  if(!el) return;
+  if(d < 1)       el.textContent = 'Menos de 1 m';
+  else if(d < 3)  el.textContent = '~' + Math.round(d*10)/10 + ' m';
+  else if(d < 10) el.textContent = '~' + Math.round(d) + ' m';
+  else if(d < 30) el.textContent = '~' + Math.round(d) + ' m';
+  else            el.textContent = 'Más de 30 m';
+  // Color según distancia
+  el.style.color = d<2?'#00e87a':d<6?'#ffc940':'#ff3a5c';
+}
+
 function updateBattery(pct){
   document.getElementById('battPct').textContent=pct+'%';
   const bar=document.getElementById('battBar');
@@ -728,14 +753,14 @@ function onDisconnected(){
   setDisconnectedUI(false);
   log('⚠️ Tag desconectado','err');
   if(document.getElementById('notifDisconnect').checked)
-    notify('📡 TagFin — Tag perdido','Intentando reconectar...');
+    notify('📡 TagFind — Tag perdido','Intentando reconectar...');
   if(document.getElementById('autoReconnect').checked) scheduleReconnect();
   else document.getElementById('btnScan').disabled=false;
 }
 function scheduleReconnect(){
   if(reconnectAttempts>=MAX_RECONNECT){
     log('❌ No se pudo reconectar','err');
-    notify('📡 TagFin','No se pudo reconectar. Toca para intentar.');
+    notify('📡 TagFind','No se pudo reconectar. Toca para intentar.');
     setDisconnectedUI(false); reconnectAttempts=0; return;
   }
   reconnectAttempts++;
@@ -752,7 +777,7 @@ async function doReconnect(){
     setConnectedUI(savedDeviceName);
     log('✅ Reconectado','ok');
     if(document.getElementById('notifReconnect').checked)
-      notify('📡 TagFin — Tag encontrado','Reconectado correctamente ✅');
+      notify('📡 TagFind — Tag encontrado','Reconectado correctamente ✅');
     try{
       const svc=await gattServer.getPrimaryService(SVC_ALERT);
       alertChar=await svc.getCharacteristic(CHAR_ALERT);
@@ -845,14 +870,14 @@ function runDemo(){
       document.getElementById('mainBadge').className='header-badge badge-scan';
       log('[DEMO] ⚠️ Señal perdida — reconectando...','err');
       if(document.getElementById('notifDisconnect').checked)
-        notify('📡 TagFin Demo','Simulando pérdida de señal...');
+        notify('📡 TagFind Demo','Simulando pérdida de señal...');
       setTimeout(()=>{
         connected=true; base=-75;
         document.getElementById('mainBadge').textContent='Conectado';
         document.getElementById('mainBadge').className='header-badge badge-on';
         log('[DEMO] ✅ Reconectado automáticamente','ok');
         if(document.getElementById('notifReconnect').checked)
-          notify('📡 TagFin Demo','Tag reconectado ✅');
+          notify('📡 TagFind Demo','Tag reconectado ✅');
       },3000);
     }
     if(connected) updateSignalUI(Math.round(base));
